@@ -57,6 +57,8 @@ class Analysis:
             seasons = self.seasons_data
         
         for season in seasons.index:
+            if season == 2022:
+                continue # Until we have tourney data
             if exclude_2020 and season == 2020:
                 continue
             self.load_season(season)
