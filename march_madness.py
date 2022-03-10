@@ -121,6 +121,12 @@ class Analysis:
             
         final_score = - season_score_total / nGames
 
+    def score_model_predictions(self,y,pred):
+
+        logLoss = -np.sum(y * np.log(pred) + (1 - y) * np.log(1 - pred)) / y.shape[0]
+
+        return logLoss
+
     def train_test_split_seasons(self,test_number=5):
         seasons = list(self.seasons.keys())
 
@@ -387,8 +393,8 @@ class Team:
         avg_loss_margin = np.mean(loss_margin)
         std_loss_margin = np.std(loss_margin)
 
-        close_wins = sum(win_margin <= 3)
-        close_losses = sum(loss_margin >= -3)
+        close_wins = sum((win_margin <= 3).astype(int))
+        close_losses = sum((loss_margin >= -3).astype(int))
 
         capped_win_margins = []
         for i in self.win_data.index:
@@ -421,6 +427,18 @@ class Team:
 
         capped_avg_loss_margin = np.mean(capped_loss_margins)
         capped_std_loss_margin = np.std(capped_loss_margins)
+
+        if self.loss_data is None:
+            avg_loss_margin = 0
+            std_loss_margin = 0
+            capped_avg_loss_margin = 0
+            capped_std_loss_margin = 0
+
+        if self.loss_data.shape[0] == 1:
+            avg_loss_margin = loss_margin.values[0]
+            std_loss_margin = 0
+            capped_avg_loss_margin = capped_loss_margin[0]
+            capped_std_loss_margin = 0
 
         self.features['avg win margin'] = round(avg_win_margin,precision)
         self.features['std win margin'] = round(std_win_margin,precision)
