@@ -434,10 +434,10 @@ class Team:
             capped_avg_loss_margin = 0
             capped_std_loss_margin = 0
 
-        if self.loss_data.shape[0] == 1:
-            avg_loss_margin = loss_margin.values[0]
+        if self.loss_data.shape[0] <= 1:
+            avg_loss_margin = 0
             std_loss_margin = 0
-            capped_avg_loss_margin = capped_loss_margin[0]
+            capped_avg_loss_margin = 0
             capped_std_loss_margin = 0
 
         self.features['avg win margin'] = round(avg_win_margin,precision)
