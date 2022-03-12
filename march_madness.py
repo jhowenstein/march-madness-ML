@@ -45,6 +45,13 @@ class Analysis:
         self.tourney_seeds = pd.read_csv(os.path.join(self.data_folder,'MNCAATourneySeeds.csv'))
         self.regular_season_results = pd.read_csv(os.path.join(self.data_folder,'MRegularSeasonCompactResults.csv'))
 
+        self.process_input_data()
+
+    def process_input_data(self):
+
+        seeds = self.tourney_seeds['Seed'].values
+        self.tourney_seeds['Numerical Seed'] = [parse_seed(seed) for seed in seeds]
+
     def load_seasons(self,start=None,end=None,exclude_2020=True):
 
         if start is not None and end is not None:
@@ -185,11 +192,83 @@ class Season:
         self.calc_teams_oponents_opponents_win_percentage()
         self.calc_teams_win_margin_stats()
         self.assign_tourney_seeds()
+        self.calc_quality_wins()
 
     def calc_teams_win_percentage(self):
         for team in self.teams.values():
             team.calc_win_pct()
             team.calc_weighted_win_pct()
+
+    def calc_quality_wins(self):
+
+        top64 = self.tourney_seeds
+        top32 = self.tourney_seeds[self.tourney_seeds['Numerical Seed'] <= 8]
+        top16 = self.tourney_seeds[self.tourney_seeds['Numerical Seed'] <= 4]
+        top8 = self.tourney_seeds[self.tourney_seeds['Numerical Seed'] <= 2]
+
+        for team_id,team in self.teams.items():
+
+            top64_wins = team.win_data.merge(top64,left_on='LTeamID',right_index=True)
+            top32_wins = team.win_data.merge(top32,left_on='LTeamID',right_index=True)
+            top16_wins = team.win_data.merge(top16,left_on='LTeamID',right_index=True)
+            top8_wins = team.win_data.merge(top8,left_on='LTeamID',right_index=True)
+
+            top64_losses = team.loss_data.merge(top64,left_on='WTeamID',right_index=True)
+            top32_losses = team.loss_data.merge(top32,left_on='WTeamID',right_index=True)
+            top16_losses = team.loss_data.merge(top16,left_on='WTeamID',right_index=True)
+            top8_losses = team.loss_data.merge(top8,left_on='WTeamID',right_index=True)
+
+            weighted_top64_wins = 0
+            weighted_top32_wins = 0
+            weighted_top16_wins = 0
+            weighted_top8_wins = 0
+
+            weighted_top64_losses = 0
+            weighted_top32_losses = 0
+            weighted_top16_losses = 0
+            weighted_top8_losses = 0
+
+            for i in top64_wins.index:
+                loc = top64_wins.loc[i]['WLoc']
+                weighted_top64_wins += get_win_location_weight(loc)
+
+            for i in top32_wins.index:
+                loc = top32_wins.loc[i]['WLoc']
+                weighted_top32_wins += get_win_location_weight(loc)
+
+            for i in top16_wins.index:
+                loc = top16_wins.loc[i]['WLoc']
+                weighted_top16_wins += get_win_location_weight(loc)
+
+            for i in top8_wins.index:
+                loc = top8_wins.loc[i]['WLoc']
+                weighted_top8_wins += get_win_location_weight(loc)
+                    
+            for i in top64_losses.index:
+                loc = top64_losses.loc[i]['WLoc']           
+                weighted_top64_losses += get_loss_location_weight(loc)
+
+            for i in top32_losses.index:
+                loc = top32_losses.loc[i]['WLoc']           
+                weighted_top32_losses += get_loss_location_weight(loc)
+
+            for i in top16_losses.index:
+                loc = top16_losses.loc[i]['WLoc']           
+                weighted_top16_losses += get_loss_location_weight(loc)
+
+            for i in top8_losses.index:
+                loc = top8_losses.loc[i]['WLoc']           
+                weighted_top8_losses += get_loss_location_weight(loc)
+
+            team.features['weighted top64 wins'] = weighted_top64_wins
+            team.features['weighted top32 wins'] = weighted_top32_wins
+            team.features['weighted top16 wins'] = weighted_top16_wins
+            team.features['weighted top8 wins'] = weighted_top8_wins
+
+            team.features['weighted top64 losses'] = weighted_top64_losses
+            team.features['weighted top32 losses'] = weighted_top32_losses
+            team.features['weighted top16 losses'] = weighted_top16_losses
+            team.features['weighted top8 losses'] = weighted_top8_losses
 
     def calc_teams_opponents_win_percentage(self,precision=4):
         for team_id,team in self.teams.items():
