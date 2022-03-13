@@ -84,7 +84,10 @@ class Analysis:
             print(year)
             season.feature_pipeline()
 
-    def seasons_generate_tourney_model_data(self,seasons,feature_keys=[]):
+    def seasons_generate_tourney_model_data(self,seasons=None,feature_keys=[]):
+        if seasons is None:
+            seasons = list(self.seasons.keys())[:-1]
+
         features = []
         targets = []
         for season in seasons:
@@ -193,6 +196,7 @@ class Season:
         self.calc_teams_win_margin_stats()
         self.assign_tourney_seeds()
         self.calc_quality_wins()
+        self.calc_teams_late_season_form()
 
     def calc_teams_win_percentage(self):
         for team in self.teams.values():
@@ -356,6 +360,10 @@ class Season:
     def calc_teams_win_margin_stats(self):
         for team_id,team in self.teams.items():
             team.calc_win_margin_stats()
+
+    def calc_teams_late_season_form(self):
+        for team_id,team in self.teams.items():
+            team.calc_late_season_form()
 
     def assign_tourney_seeds(self):
         for team_id,team in self.teams.items():
@@ -533,6 +541,79 @@ class Team:
 
         self.features['close wins'] = close_wins
         self.features['close losses'] = close_losses
+
+    def calc_late_season_form(self,precision=3):
+        season_data = pd.concat([self.win_data,self.loss_data]).sort_values('DayNum')
+
+        last10_data = season_data[-10:]
+        last5_data = season_data[-5:]
+
+        last10_win_count = 0
+        last10_weighted_win_count = 0
+        last10_weighted_loss_count = 0
+
+        for i in last10_data.index:
+            game = last10_data.loc[i]
+            
+            winner_id = game['WTeamID']
+            winner_loc = game['WLoc']
+            
+            if winner_id == self.id:
+                last10_win_count += 1
+                last10_weighted_win_count += get_win_location_weight(winner_loc)
+            else:
+                last10_weighted_loss_count += get_loss_location_weight(winner_loc)
+
+        last10_win_pct = last10_win_count / last10_data.shape[0]
+        last10_weighted_win_pct = round(last10_weighted_win_count / (last10_weighted_win_count + last10_weighted_loss_count),precision)
+
+        last5_win_count = 0
+        last5_weighted_win_count = 0
+        last5_weighted_loss_count = 0
+
+        for i in last5_data.index:
+            game = last5_data.loc[i]
+            
+            winner_id = game['WTeamID']
+            winner_loc = game['WLoc']
+            
+            if winner_id == self.id:
+                last5_win_count += 1
+                last5_weighted_win_count += get_win_location_weight(winner_loc)
+            else:
+                last5_weighted_loss_count += get_loss_location_weight(winner_loc)
+                
+        last5_win_pct = last5_win_count / last5_data.shape[0]
+        last5_weighted_win_pct = round(last5_weighted_win_count / (last5_weighted_win_count + last5_weighted_loss_count),precision)
+
+        conf_tourney_wins = 0
+
+        for i in last10_data.index[::-1]:
+            game = last10_data.loc[i]
+            
+            loc = game['WLoc']
+            
+            if loc != 'N':
+                break
+            else:
+                if game['WTeamID'] == self.id:
+                    conf_tourney_wins += 1
+
+        last_game_index = last5_data.index[-1]
+        last_game = last5_data.loc[last_game_index]
+        if last_game['WTeamID'] == self.id:
+            conf_champ = 1
+        else:
+            conf_champ = 0
+
+        self.features['last10 win pct'] = last10_win_pct
+        self.features['last10 weighted win pct'] = last10_weighted_win_pct
+
+        self.features['last5 win pct'] = last5_win_pct
+        self.features['last5 weighted win pct'] = last5_weighted_win_pct
+
+        self.features['conference tourney wins'] = conf_tourney_wins
+        self.features['conference champ'] = conf_champ
 
 class Game:
     def __init__(self):
