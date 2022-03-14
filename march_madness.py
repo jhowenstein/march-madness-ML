@@ -84,7 +84,7 @@ class Analysis:
             print(year)
             season.feature_pipeline()
 
-    def seasons_generate_tourney_model_data(self,seasons=None,feature_keys=[]):
+    def seasons_generate_tourney_model_data(self,feature_keys=[],seasons=None):
         if seasons is None:
             seasons = list(self.seasons.keys())[:-1]
 
