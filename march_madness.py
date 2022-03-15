@@ -33,7 +33,7 @@ def parse_seed(seed_string):
     return seed_int
 
 class Analysis:
-    def __init__(self,data_folder='MDataFiles_Stage1'):
+    def __init__(self,data_folder='MDataFiles_Stage2'):
         self.data_folder = data_folder
         self.load_data()
         self.seasons = {}
@@ -64,8 +64,6 @@ class Analysis:
             seasons = self.seasons_data
         
         for season in seasons.index:
-            if season == 2022:
-                continue # Until we have tourney data
             if exclude_2020 and season == 2020:
                 continue
             self.load_season(season)
@@ -91,6 +89,9 @@ class Analysis:
         features = []
         targets = []
         for season in seasons:
+            if season == 2020:
+                continue
+            
             _X, _y = self.seasons[season].generate_tourney_model_data(feature_keys=feature_keys)
             features.append(_X)
             targets.append(_y)
