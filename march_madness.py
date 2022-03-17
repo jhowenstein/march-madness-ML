@@ -39,11 +39,13 @@ class Analysis:
         self.seasons = {}
 
     def load_data(self):
-        self.team_data = pd.read_csv(os.path.join(self.data_folder,'MTeams.csv'),index_col=0)
-        self.seasons_data = pd.read_csv(os.path.join(self.data_folder,'MSeasons.csv'),index_col=0)
-        self.tourney_results = pd.read_csv(os.path.join(self.data_folder,'MNCAATourneyCompactResults.csv'))
-        self.tourney_seeds = pd.read_csv(os.path.join(self.data_folder,'MNCAATourneySeeds.csv'))
-        self.regular_season_results = pd.read_csv(os.path.join(self.data_folder,'MRegularSeasonCompactResults.csv'))
+        mf_character = self.data_folder[0]
+
+        self.team_data = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}Teams.csv'),index_col=0)
+        self.seasons_data = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}Seasons.csv'),index_col=0)
+        self.tourney_results = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}NCAATourneyCompactResults.csv'))
+        self.tourney_seeds = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}NCAATourneySeeds.csv'))
+        self.regular_season_results = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}RegularSeasonCompactResults.csv'))
 
         self.process_input_data()
 
