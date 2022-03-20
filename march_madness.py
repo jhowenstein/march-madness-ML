@@ -150,6 +150,29 @@ class Analysis:
 
         return seasons, test_seasons
 
+    def generate_seed_win_predictions(self,df):
+        pcts = pd.read_csv('seed win percentage.csv')
+
+        df.index = np.arange(df.shape[0])
+        preds = []
+        for i in df.index:
+            game = df.loc[i]
+            team1_seed = game['team1 - tourney seed']
+            team2_seed = game['team2 - tourney seed']
+
+            if team1_seed == team2_seed:
+                pred = 0.5
+            elif team1_seed < team2_seed:
+                pred = pcts[(pcts['Team Seed']==team1_seed)&(pcts['Opponent Seed']==team2_seed)]['pct'].values[0]
+            elif team2_seed < team1_seed:
+                pred = 1 - pcts[(pcts['Team Seed']==team2_seed)&(pcts['Opponent Seed']==team1_seed)]['pct'].values[0]
+                
+            preds.append(pred)
+            
+        preds = np.array(preds)
+
+        return preds
+
 class Season:
     def __init__(self, year, season_data, regular_season_results, tourney_seeds, tourney_results):
         self.year = year
