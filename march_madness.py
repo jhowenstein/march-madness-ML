@@ -32,6 +32,18 @@ def parse_seed(seed_string):
     seed_int = int(seed_num)
     return seed_int
 
+def bound_predictions(predictions,alpha=0.025):
+    bounded_predictions = []
+    for pred in predictions:
+        if pred > (1-alpha):
+            pred = (1-alpha)
+        elif pred < alpha:
+            pred = alpha
+            
+        bounded_predictions.append(pred)
+        
+    return np.array(bounded_predictions)
+
 class Analysis:
     def __init__(self,data_folder='MDataFiles_Stage2'):
         self.data_folder = data_folder
