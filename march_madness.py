@@ -55,9 +55,9 @@ class Analysis:
 
         self.team_data = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}Teams.csv'),index_col=0)
         self.seasons_data = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}Seasons.csv'),index_col=0)
-        self.tourney_results = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}NCAATourneyCompactResults.csv'))
+        self.tourney_results = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}NCAATourneyDetailedResults.csv'))
         self.tourney_seeds = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}NCAATourneySeeds.csv'))
-        self.regular_season_results = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}RegularSeasonCompactResults.csv'))
+        self.regular_season_results = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}RegularSeasonDetailedResults.csv'))
 
         self.process_input_data()
 
