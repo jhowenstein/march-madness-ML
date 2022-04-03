@@ -91,12 +91,12 @@ class Analysis:
 
         self.seasons[year] = Season(year,season_data,season_regular_season_results,season_tourney_seeds,season_tourney_results)
 
-    def calc_seasons_features(self):
+    def calc_seasons_features(self,detailed_stats_features=True):
         for year,season in self.seasons.items():
             print(year)
-            season.feature_pipeline()
+            season.feature_pipeline(detailed_stats_features=detailed_stats_features)
 
-    def seasons_generate_tourney_model_data(self,feature_keys=[],seasons=None):
+    def seasons_generate_tourney_model_data(self,feature_keys=[],seasons=None,fill_nan=True):
         if seasons is None:
             seasons = list(self.seasons.keys())[:-1]
 
@@ -112,6 +112,11 @@ class Analysis:
 
         X = pd.concat(features,axis=0)
         y = np.concatenate(targets)
+
+        if fill_nan:
+            for key in X.keys():
+                col = X[key]
+                X[key] = col.fillna(col.median())
 
         return X, y
 
@@ -227,7 +232,7 @@ class Season:
         team_loss_data = self.regular_season_results[self.regular_season_results['LTeamID']==team_id]
         self.teams[team_id] = Team(team_id,team_win_data,team_loss_data)
 
-    def feature_pipeline(self):
+    def feature_pipeline(self,detailed_stats_features=True):
         self.calc_teams_win_percentage()
         self.calc_teams_opponents_win_percentage()
         self.calc_teams_oponents_opponents_win_percentage()
@@ -235,6 +240,11 @@ class Season:
         self.assign_tourney_seeds()
         self.calc_quality_wins()
         self.calc_teams_late_season_form()
+        if detailed_stats_features:
+            # These features are fairly time intensive so they can be skipped if unused
+            self.calc_teams_detailed_game_stats()
+            self.calc_teams_avg_detailed_game_stats()
+            self.calc_teams_net_detailed_game_stats()
 
     def calc_teams_win_percentage(self):
         for team in self.teams.values():
@@ -395,6 +405,91 @@ class Season:
 
             team.features['oowp'] = round(oowp,precision)
 
+    def calc_teams_net_detailed_game_stats(self,precision=4):
+        metric_keys = ['FGM','FGA','FGM3','FGA3','FTM','FTA','OR','DR','Ast','TO%','Stl%','Blk%','PF',
+                       'TR','FGM2','FGA2','FG%','FG2%','FG3%','FGA3%','FT%','Pos','OEff']
+
+        for team_id,team in self.teams.items():
+            for metric in metric_keys:
+                net_values = []
+                game_count = 0
+                for i in team.win_data.index:
+                    game = team.win_data.loc[i]
+                    
+                    team_game_value = game[f'W{metric}']
+                    
+                    opp_id = game['LTeamID']
+                    opp_avg_value = self.teams[opp_id].features[f'Opp Avg {metric}']
+                    
+                    if np.isnan(team_game_value) or np.isnan(opp_avg_value):
+                        continue
+                    
+                    net_value = team_game_value - opp_avg_value
+                    
+                    net_values.append(net_value)
+                    
+                for i in team.loss_data.index:
+                    game = team.loss_data.loc[i]
+                    
+                    team_game_value = game[f'L{metric}']
+                    
+                    opp_id = game['WTeamID']
+                    opp_avg_value = self.teams[opp_id].features[f'Opp Avg {metric}']
+                    
+                    if np.isnan(team_game_value) or np.isnan(opp_avg_value):
+                        continue
+                    
+                    net_value = team_game_value - opp_avg_value
+                    
+                    net_values.append(net_value)
+        
+                team_net_value = np.mean(net_values)
+
+                if np.isnan(team_net_value):
+                    team_net_value = 0
+
+                team.features[f'Net Team Avg {metric}'] = round(team_net_value,precision)
+
+            for metric in metric_keys:
+                net_values = []
+                game_count = 0
+                for i in team.win_data.index:
+                    game = team.win_data.loc[i]
+                    
+                    opp_game_value = game[f'L{metric}']
+                    
+                    opp_id = game['LTeamID']
+                    opp_avg_value = self.teams[opp_id].features[f'Team Avg {metric}']
+                    
+                    if np.isnan(opp_game_value) or np.isnan(opp_avg_value):
+                        continue
+                    
+                    net_value = opp_game_value - opp_avg_value
+                    
+                    net_values.append(net_value)
+                    
+                for i in team.loss_data.index:
+                    game = team.loss_data.loc[i]
+                    
+                    opp_game_value = game[f'W{metric}']
+                    
+                    opp_id = game['WTeamID']
+                    opp_avg_value = self.teams[opp_id].features[f'Team Avg {metric}']
+                    
+                    if np.isnan(opp_game_value) or np.isnan(opp_avg_value):
+                        continue
+                    
+                    net_value = opp_game_value - opp_avg_value
+                    
+                    net_values.append(net_value)
+                    
+                team_net_value = np.mean(net_values)
+
+                if np.isnan(team_net_value):
+                    team_net_value = 0
+
+                team.features[f'Net Opp Avg {metric}'] = round(team_net_value,precision)
+
     def calc_teams_win_margin_stats(self):
         for team_id,team in self.teams.items():
             team.calc_win_margin_stats()
@@ -402,6 +497,14 @@ class Season:
     def calc_teams_late_season_form(self):
         for team_id,team in self.teams.items():
             team.calc_late_season_form()
+
+    def calc_teams_detailed_game_stats(self):
+        for team_id,team in self.teams.items():
+            team.calc_detailed_game_stats()
+
+    def calc_teams_avg_detailed_game_stats(self):
+        for team_id,team in self.teams.items():
+            team.calc_avg_detailed_game_stats()
 
     def assign_tourney_seeds(self):
         for team_id,team in self.teams.items():
@@ -652,6 +755,46 @@ class Team:
 
         self.features['conference tourney wins'] = conf_tourney_wins
         self.features['conference champ'] = conf_champ
+
+    def calc_detailed_game_stats(self):
+        for df in (self.win_data,self.loss_data):
+            for t in ('W','L'):
+                df[f'{t}TR'] = df[f'{t}OR'] + df[f'{t}DR']
+                df[f'{t}FGM2'] = df[f'{t}FGM'] - df[f'{t}FGM3']
+                df[f'{t}FGA2'] = df[f'{t}FGA'] - df[f'{t}FGA3']
+                df[f'{t}FG%'] = df[f'{t}FGM'] / df[f'{t}FGA']
+                df[f'{t}FG2%'] = df[f'{t}FGM2'] / df[f'{t}FGA2']
+                df[f'{t}FG3%'] = df[f'{t}FGM3'] / df[f'{t}FGA3']
+                df[f'{t}FGA3%'] = df[f'{t}FGA3'] / df[f'{t}FGA']
+                df[f'{t}FT%'] = df[f'{t}FTM'] / df[f'{t}FTA']
+                df[f'{t}Pos'] = (0.96 * df[f'{t}FGA']) - df[f'{t}OR'] + df[f'{t}TO'] + (0.44 * df[f'{t}FTA'])
+                df[f'{t}TO%'] = df[f'{t}TO'] / df[f'{t}Pos']
+                df[f'{t}Stl%'] = df[f'{t}Stl'] / df[f'{t}Pos']
+                df[f'{t}Blk%'] = df[f'{t}Blk'] / df[f'{t}Pos']
+                df[f'{t}FT%'] = df[f'{t}FTM'] / df[f'{t}FTA']
+                df[f'{t}OEff'] = df[f'{t}Score'] / df[f'{t}Pos']
+
+    def calc_avg_detailed_game_stats(self,precision=4):
+        metric_keys = ['FGM','FGA','FGM3','FGA3','FTM','FTA','OR','DR','Ast','TO%','Stl%','Blk%','PF',
+                       'TR','FGM2','FGA2','FG%','FG2%','FG3%','FGA3%','FT%','Pos','OEff']
+
+        for metric in metric_keys:
+            team_win_values = self.win_data[f'W{metric}'].values
+            team_loss_values = self.loss_data[f'L{metric}'].values
+            
+            team_values = np.concatenate((team_win_values,team_loss_values))
+            team_avg = team_values.mean()
+            
+            self.features[f'Team Avg {metric}'] = round(team_avg,precision)
+            
+        for metric in metric_keys:
+            team_win_values = self.win_data[f'L{metric}'].values
+            team_loss_values = self.loss_data[f'W{metric}'].values
+            
+            team_values = np.concatenate((team_win_values,team_loss_values))
+            team_avg = team_values.mean()
+            
+            self.features[f'Opp Avg {metric}'] = round(team_avg,precision)
 
 class Game:
     def __init__(self):
