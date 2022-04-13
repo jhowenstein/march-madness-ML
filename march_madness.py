@@ -55,9 +55,9 @@ class Analysis:
 
         self.team_data = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}Teams.csv'),index_col=0)
         self.seasons_data = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}Seasons.csv'),index_col=0)
-        self.tourney_results = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}NCAATourneyDetailedResults.csv'))
+        self.tourney_results = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}NCAATourneyCompactResults.csv'))
         self.tourney_seeds = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}NCAATourneySeeds.csv'))
-        self.regular_season_results = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}RegularSeasonDetailedResults.csv'))
+        self.regular_season_results = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}RegularSeasonCompactResults.csv'))
 
         self.process_input_data()
 
@@ -107,6 +107,7 @@ class Analysis:
                 continue
             
             _X, _y = self.seasons[season].generate_tourney_model_data(feature_keys=feature_keys)
+
             features.append(_X)
             targets.append(_y)
 
@@ -150,6 +151,8 @@ class Analysis:
             season_score_total += score_game(pct)
             
         final_score = - season_score_total / nGames
+
+        return final_score
 
     def score_model_predictions(self,y,pred):
 
