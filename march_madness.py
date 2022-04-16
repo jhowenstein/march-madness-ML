@@ -57,7 +57,7 @@ class Analysis:
         self.seasons_data = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}Seasons.csv'),index_col=0)
         self.tourney_results = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}NCAATourneyCompactResults.csv'))
         self.tourney_seeds = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}NCAATourneySeeds.csv'))
-        self.regular_season_results = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}RegularSeasonCompactResults.csv'))
+        self.regular_season_results = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}RegularSeasonCombinedResults.csv'))
 
         self.process_input_data()
 
@@ -98,7 +98,7 @@ class Analysis:
 
     def seasons_generate_tourney_model_data(self,feature_keys=[],seasons=None,fill_nan=True):
         if seasons is None:
-            seasons = list(self.seasons.keys())[:-1]
+            seasons = list(self.seasons.keys())
 
         features = []
         targets = []
@@ -121,9 +121,9 @@ class Analysis:
 
         return X, y
 
-    def generate_predictions(seasons=None):
+    def generate_predictions(self,seasons=None):
         if seasons is None:
-            seasons = np.arange(1985,2022)
+            seasons = list(self.seasons.keys())
 
     def evaluate_predictions(self,season,predictions_filename):
         predictions = pd.read_csv(predictions_filename,index_col=0)['Pred']
