@@ -50,6 +50,9 @@ class Analysis:
         self.load_data()
         self.seasons = {}
 
+        self.loaded_training_data = None
+        self.loaded_validation_data = None
+
     def load_data(self):
         mf_character = self.data_folder[0]
 
@@ -60,6 +63,42 @@ class Analysis:
         self.regular_season_results = pd.read_csv(os.path.join(self.data_folder,f'{mf_character}RegularSeasonCombinedResults.csv'))
 
         self.process_input_data()
+
+    def load_training_data(self,filename):
+        self.loaded_training_data = pd.read_csv(filename)
+
+    def load_validation_data(self,filename):
+        self.loaded_validation_data = pd.read_csv(filename)
+
+    def extract_training_data(self,feature_keys=[],target_key='team1 win'):
+
+        team1_data_names = []
+        team2_data_names = []
+        for key in feature_keys:
+            team1_data_names.append(f'team1 - {key}')
+            team2_data_names.append(f'team2 - {key}')
+            
+        data_names = team1_data_names + team2_data_names
+
+        X = self.loaded_training_data[data_names]
+        y = self.loaded_training_data[target_key].values
+
+        return X, y
+
+    def extract_validation_data(self,feature_keys=[],target_key='team1 win'):
+
+        team1_data_names = []
+        team2_data_names = []
+        for key in feature_keys:
+            team1_data_names.append(f'team1 - {key}')
+            team2_data_names.append(f'team2 - {key}')
+            
+        data_names = team1_data_names + team2_data_names
+
+        X = self.loaded_validation_data[data_names]
+        y = self.loaded_validation_data[target_key].values
+
+        return X, y
 
     def process_input_data(self):
 
@@ -449,9 +488,12 @@ class Season:
                 team_net_value = np.mean(net_values)
 
                 if np.isnan(team_net_value):
-                    team_net_value = 0
+                    team_net_value = None
 
-                team.features[f'Net Team Avg {metric}'] = round(team_net_value,precision)
+                if team_net_value is None:
+                    team.features[f'Net Team Avg {metric}'] = team_net_value
+                else:
+                    team.features[f'Net Team Avg {metric}'] = round(team_net_value,precision)
 
             for metric in metric_keys:
                 net_values = []
@@ -489,9 +531,12 @@ class Season:
                 team_net_value = np.mean(net_values)
 
                 if np.isnan(team_net_value):
-                    team_net_value = 0
+                    team_net_value = None
 
-                team.features[f'Net Opp Avg {metric}'] = round(team_net_value,precision)
+                if team_net_value is None:
+                    team.features[f'Net Opp Avg {metric}'] = team_net_value
+                else:
+                    team.features[f'Net Opp Avg {metric}'] = round(team_net_value,precision)
 
     def calc_teams_win_margin_stats(self):
         for team_id,team in self.teams.items():
