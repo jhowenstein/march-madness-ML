@@ -193,11 +193,11 @@ class Analysis:
 
         return final_score
 
-    def score_model_predictions(self,y,pred):
+    def score_model_predictions(self, y, pred, precision=5):
 
         logLoss = -np.sum(y * np.log(pred) + (1 - y) * np.log(1 - pred)) / y.shape[0]
 
-        return logLoss
+        return round(logLoss,precision)
 
     def train_test_split_seasons(self,test_number=5):
         seasons = list(self.seasons.keys())
